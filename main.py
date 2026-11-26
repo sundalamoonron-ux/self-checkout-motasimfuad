@@ -46,10 +46,26 @@ LINE = "Twelve yoghurts. That's not a shop, that's a hostage situation with live
 
 
 def main() -> None:
+    # Gate check before writing: exactly one line, 1-200 chars, no
+    # stray whitespace or control characters sneaking into the output.
+    if "\n" in LINE or "\r" in LINE:
+        raise ValueError("LINE must be exactly one line")
+    if not 1 <= len(LINE) <= 200:
+        raise ValueError(f"LINE must be 1-200 characters, got {len(LINE)}")
+    if LINE != LINE.strip():
+        raise ValueError("LINE must not have leading/trailing whitespace")
+
     out_dir = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
     os.makedirs(out_dir, exist_ok=True)
-    with open(os.path.join(out_dir, "entry.txt"), "w", encoding="utf-8") as f:
+    path = os.path.join(out_dir, "entry.txt")
+    with open(path, "w", encoding="utf-8") as f:
         f.write(LINE + "\n")
+    # Verify what actually landed on disk is byte-identical to the
+    # intended line, so a stray write can never silently change it.
+    with open(path, "rb") as f:
+        written = f.read()
+    if written != (LINE + "\n").encode("utf-8"):
+        raise ValueError("entry.txt on disk does not match LINE")
 
 
 if __name__ == "__main__":
